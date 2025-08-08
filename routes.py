@@ -1,10 +1,11 @@
 import logging
 from datetime import datetime, timedelta
-from flask import render_template, request, jsonify, flash, redirect, url_for, session
+from flask import render_template, request, jsonify, flash, redirect, url_for, session, Response
 from flask_login import login_user, logout_user, login_required, current_user
 from app import app, db
 from models import Client, Equipement, HistoriquePing, Alerte, User
 from email_service import email_service
+from camera_stream import camera_manager, generate_stream_response
 
 logger = logging.getLogger(__name__)
 
