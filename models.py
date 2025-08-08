@@ -84,6 +84,15 @@ class Equipement(db.Model):
     date_creation = db.Column(db.DateTime, default=datetime.utcnow)
     actif = db.Column(db.Boolean, default=True)
     
+    # Champs pour les flux RTSP/IP
+    rtsp_url = db.Column(db.String(500))  # URL RTSP complète
+    rtsp_username = db.Column(db.String(100))  # Nom d'utilisateur pour l'authentification RTSP
+    rtsp_password = db.Column(db.String(100))  # Mot de passe pour l'authentification RTSP
+    stream_enabled = db.Column(db.Boolean, default=False)  # Flux vidéo activé
+    resolution = db.Column(db.String(20), default='640x480')  # Résolution préférée
+    fps = db.Column(db.Integer, default=15)  # Images par seconde
+    stream_quality = db.Column(db.String(20), default='medium')  # low, medium, high
+    
     # Relation avec l'historique des pings
     historique_pings = db.relationship('HistoriquePing', backref='equipement', lazy=True, cascade='all, delete-orphan')
     
@@ -121,6 +130,35 @@ class Equipement(db.Model):
             return f"{minutes} minute(s)"
         else:
             return "< 1 minute"
+    
+    @property
+    def rtsp_stream_url(self):
+        """Construit l'URL RTSP complète avec authentification"""
+        if not self.rtsp_url:
+            return None
+        
+        if self.rtsp_username and self.rtsp_password:
+            # Format: rtsp://username:password@host:port/path
+            if '://' in self.rtsp_url:
+                protocol, rest = self.rtsp_url.split('://', 1)
+                return f"{protocol}://{self.rtsp_username}:{self.rtsp_password}@{rest}"
+        
+        return self.rtsp_url
+    
+    @property
+    def has_stream_capability(self):
+        """Vérifie si cet équipement peut diffuser de la vidéo"""
+        return bool(self.rtsp_url and self.stream_enabled)
+    
+    def get_stream_resolution(self):
+        """Retourne la résolution sous forme de tuple (largeur, hauteur)"""
+        if self.resolution and 'x' in self.resolution:
+            try:
+                w, h = self.resolution.split('x')
+                return int(w), int(h)
+            except ValueError:
+                pass
+        return 640, 480  # Résolution par défaut
 
 class HistoriquePing(db.Model):
     __tablename__ = 'historique_pings'

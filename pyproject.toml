@@ -18,4 +18,7 @@ dependencies = [
     "sendgrid>=6.12.4",
     "apscheduler>=3.11.0",
     "requests>=2.32.4",
+    "opencv-python>=4.12.0.88",
+    "pillow>=11.3.0",
+    "ffmpeg-python>=0.2.0",
 ]
