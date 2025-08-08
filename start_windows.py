@@ -21,31 +21,52 @@ def check_python():
 
 def install_requirements():
     """Installer les dépendances si nécessaires"""
-    requirements = [
-        'flask', 'flask-sqlalchemy', 'flask-login', 'werkzeug',
+    core_requirements = [
+        'flask', 'flask_sqlalchemy', 'flask_login', 'werkzeug',
         'sendgrid', 'apscheduler', 'requests'
     ]
     
-    print("Vérification des dépendances...")
-    missing = []
+    optional_requirements = [
+        'cv2',  # opencv-python
+        'PIL',  # pillow
+    ]
     
-    for package in requirements:
+    print("Vérification des dépendances core...")
+    missing_core = []
+    
+    for package in core_requirements:
         try:
-            __import__(package.replace('-', '_'))
+            __import__(package)
         except ImportError:
-            missing.append(package)
+            missing_core.append(package.replace('_', '-'))
     
-    if missing:
-        print(f"Installation des packages manquants: {', '.join(missing)}")
+    if missing_core:
+        print(f"Installation des packages essentiels: {', '.join(missing_core)}")
         try:
-            subprocess.run([sys.executable, '-m', 'pip', 'install'] + missing, 
+            subprocess.run([sys.executable, '-m', 'pip', 'install'] + missing_core, 
                          check=True)
-            print("✓ Dépendances installées")
-        except subprocess.CalledProcessError:
-            print("❌ Erreur lors de l'installation des dépendances")
-            return False
+            print("✓ Dépendances core installées")
+        except subprocess.CalledProcessError as e:
+            print(f"❌ Erreur installation core: {e}")
+            # Essayer installation individuelle
+            for pkg in missing_core:
+                try:
+                    subprocess.run([sys.executable, '-m', 'pip', 'install', pkg], 
+                                 check=True)
+                    print(f"✓ {pkg} installé")
+                except subprocess.CalledProcessError:
+                    print(f"⚠️ {pkg} échoué - continuez sans ce package")
     else:
-        print("✓ Toutes les dépendances sont présentes")
+        print("✓ Toutes les dépendances core présentes")
+    
+    # Vérification optionnelle (pas d'échec si absent)
+    print("Vérification des dépendances optionnelles...")
+    for package in optional_requirements:
+        try:
+            __import__(package)
+            print(f"✓ {package} disponible")
+        except ImportError:
+            print(f"⚠️ {package} non disponible - fonctionnalités limitées")
     
     return True
 

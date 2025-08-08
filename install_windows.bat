@@ -41,9 +41,25 @@ if %errorlevel% neq 0 (
 
 :: Installer les dépendances
 echo.
-echo Installation des dépendances...
+echo Installation des dépendances de base...
 pip install --upgrade pip
-pip install -r requirements_windows.txt
+
+:: Installer les dépendances une par une pour éviter les conflits
+echo Installation de Flask et extensions...
+pip install "flask>=2.0.0,<4.0.0" "flask-sqlalchemy>=3.0.0,<4.0.0" "flask-login>=0.6.0,<1.0.0"
+
+echo Installation des utilitaires...
+pip install "werkzeug>=2.0.0,<4.0.0" "requests>=2.25.0,<3.0.0" "python-dotenv>=0.19.0,<2.0.0"
+
+echo Installation des services...
+pip install "sendgrid>=6.0.0,<7.0.0" "apscheduler>=3.10.0,<4.0.0" "email-validator>=1.3.0,<3.0.0"
+
+echo Installation PostgreSQL (optionnel)...
+pip install "psycopg2-binary>=2.8.0,<3.0.0" || echo PostgreSQL skip - utilisation SQLite par defaut
+
+echo Installation des bibliotheques video (optionnel)...
+pip install pillow || echo Pillow skip - pas de support images
+pip install opencv-python || echo OpenCV skip - pas de support video
 
 if %errorlevel% neq 0 (
     echo ERREUR: Erreur lors de l'installation des dépendances

@@ -2,12 +2,18 @@
 
 ## Installation Rapide
 
-### Option 1 : Installation Automatique (Recommandée)
+### Option 1 : Installation Simple (RECOMMANDÉE) ⭐
+1. **Double-cliquez sur `install_simple_windows.bat`**
+2. Attendez l'installation automatique
+3. Lancez avec `python start_windows.py`
+   - **Cette version évite les erreurs de dépendances**
+
+### Option 2 : Installation Automatique Avancée
 1. Double-cliquez sur `install_windows.bat`
 2. Suivez les instructions à l'écran
 3. Double-cliquez sur `launch_windows.bat` pour démarrer
 
-### Option 2 : Démarrage Ultra-Rapide
+### Option 3 : Démarrage Ultra-Rapide
 1. Double-cliquez sur `quick_start.bat`
    - Installe automatiquement les dépendances si nécessaire
    - Lance directement le serveur
@@ -112,10 +118,26 @@ Configurez vos équipements pour envoyer des requêtes HTTP à :
 
 ### Erreurs Communes
 
-#### "Module not found"
+#### "Module not found" ou erreurs de packages
 ```cmd
-# Solution : Réinstaller les dépendances
-pip install -r requirements_windows.txt
+# Solution 1 : Utiliser l'installateur simple
+install_simple_windows.bat
+
+# Solution 2 : Installation manuelle
+pip install flask flask-sqlalchemy flask-login werkzeug
+pip install requests sendgrid apscheduler
+
+# Solution 3 : En cas de conflit
+pip uninstall -y flask flask-sqlalchemy
+pip install --no-cache-dir flask flask-sqlalchemy
+```
+
+#### Erreur "charset_normalizer" ou "urllib3"
+```cmd
+# Solution : Installation séparée
+pip install --upgrade pip setuptools wheel
+pip install --no-deps flask flask-sqlalchemy flask-login
+pip install requests sendgrid apscheduler
 ```
 
 #### "Port 5000 already in use"
@@ -135,18 +157,45 @@ pip install -r requirements_windows.txt
 
 ### Structure des Fichiers
 ```
-├── app.py                 # Application Flask principale
-├── models.py              # Modèles de base de données
-├── routes.py              # Routes et logique métier  
-├── email_service.py       # Service d'envoi d'emails
-├── scheduler.py           # Tâches planifiées
-├── templates/             # Templates HTML
-├── static/                # CSS, JS, images
-├── install_windows.bat    # Installation automatique
-├── launch_windows.bat     # Lancement standard
-├── quick_start.bat        # Démarrage rapide
-├── start_windows.py       # Script Python de démarrage
-└── requirements_windows.txt # Dépendances Python
+├── app.py                      # Application Flask principale
+├── models.py                   # Modèles de base de données
+├── routes.py                   # Routes et logique métier  
+├── camera_stream.py            # Service de streaming RTSP/IP
+├── email_service.py            # Service d'envoi d'emails
+├── scheduler.py                # Tâches planifiées
+├── templates/                  # Templates HTML
+├── static/                     # CSS, JS, images
+├── install_simple_windows.bat  # Installation simple (RECOMMANDÉE)
+├── install_windows.bat         # Installation complète
+├── launch_windows.bat          # Lancement standard
+├── quick_start.bat             # Démarrage rapide
+├── start_windows.py            # Script Python de démarrage
+├── main_windows.py             # Version Windows optimisée
+└── requirements_windows.txt    # Dépendances Python
+```
+
+### Fonctionnalités Nouvelles - Streaming RTSP/IP 📹
+
+#### Configuration de Caméras
+- **Support RTSP** : Connexion directe aux caméras IP
+- **Authentification** : Nom d'utilisateur et mot de passe
+- **Résolutions** : 640x480, 800x600, 1024x768, 1280x720
+- **Qualité ajustable** : Low, Medium, High
+- **FPS configurables** : 1-30 images/seconde
+
+#### URLs RTSP Communes
+```
+# Hikvision
+rtsp://username:password@192.168.1.100:554/Streaming/Channels/101
+
+# Dahua  
+rtsp://username:password@192.168.1.100:554/cam/realmonitor?channel=1&subtype=0
+
+# Axis
+rtsp://username:password@192.168.1.100:554/axis-media/media.amp
+
+# Generic
+rtsp://username:password@192.168.1.100:554/stream1
 ```
 
 ### Fonctionnalités Techniques

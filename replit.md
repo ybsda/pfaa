@@ -20,7 +20,21 @@ Preferred communication style: Simple, everyday language.
   - `quick_start.bat` - Rapid deployment script
   - `start_windows.py` - Simplified Python launcher
   - `main_windows.py` - Windows-optimized main script
+  - `install_simple_windows.bat` - Conflict-free installation script
 - Created comprehensive Windows documentation in `README_WINDOWS.md`
+
+### 2025-08-08 - RTSP Camera Streaming Implementation
+- **Enhanced Equipment Model**: Added RTSP streaming fields (rtsp_url, rtsp_username, rtsp_password, stream_enabled, resolution, fps, stream_quality)
+- **Camera Streaming Service**: Created `camera_stream.py` with full OpenCV-based RTSP capture and MJPEG streaming
+- **New Routes Added**: 
+  - `/camera/<id>/stream` - Live MJPEG video feed
+  - `/camera/<id>/snapshot` - Single frame capture
+  - `/camera/<id>/start_stream` - Start camera streaming
+  - `/camera/<id>/stop_stream` - Stop camera streaming
+  - `/camera/<id>` - Camera detail page with live feed
+  - `/equipements/<id>/configure_stream` - RTSP configuration interface
+- **Resolved Windows Installation Issues**: Updated requirements to avoid charset_normalizer conflicts
+- **Database Schema Updated**: Added RTSP streaming columns to equipements table
 
 ## System Architecture
 
