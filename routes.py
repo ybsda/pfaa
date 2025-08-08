@@ -482,3 +482,206 @@ def api_equipements_status():
     except Exception as e:
         logger.error(f"Erreur dans api_equipements_status: {e}")
         return jsonify({'error': 'Erreur lors du chargement du statut des équipements'}), 500
+
+# Routes pour les flux de caméras RTSP
+@app.route('/camera/<int:camera_id>/stream')
+@login_required
+def camera_stream(camera_id):
+    """Flux vidéo MJPEG pour une caméra"""
+    try:
+        # Vérifier les permissions
+        equipement = Equipement.query.get(camera_id)
+        if not equipement:
+            return jsonify({"error": "Caméra non trouvée"}), 404
+        
+        # Vérifier les permissions d'accès
+        if current_user.role == 'client' and equipement.client_id != current_user.client_id:
+            return jsonify({"error": "Accès refusé"}), 403
+        
+        # Vérifier si le streaming est activé
+        if not equipement.has_stream_capability:
+            return jsonify({"error": "Streaming non configuré pour cette caméra"}), 400
+        
+        # Démarrer le flux si pas encore actif
+        if not camera_manager.get_stream(camera_id):
+            if not camera_manager.start_camera_stream(equipement):
+                return jsonify({"error": "Impossible de démarrer le flux"}), 500
+        
+        # Retourner le flux MJPEG
+        return generate_stream_response(camera_id)
+        
+    except Exception as e:
+        logger.error(f"Erreur flux caméra {camera_id}: {e}")
+        return jsonify({"error": "Erreur interne du serveur"}), 500
+
+@app.route('/camera/<int:camera_id>/snapshot')
+@login_required
+def camera_snapshot(camera_id):
+    """Capture instantanée d'une caméra"""
+    try:
+        # Vérifier les permissions
+        equipement = Equipement.query.get(camera_id)
+        if not equipement:
+            return jsonify({"error": "Caméra non trouvée"}), 404
+        
+        if current_user.role == 'client' and equipement.client_id != current_user.client_id:
+            return jsonify({"error": "Accès refusé"}), 403
+        
+        if not equipement.has_stream_capability:
+            return jsonify({"error": "Streaming non configuré"}), 400
+        
+        # Obtenir l'instantané
+        jpeg_data = camera_manager.get_snapshot(camera_id)
+        if jpeg_data:
+            return Response(jpeg_data, mimetype='image/jpeg')
+        else:
+            return jsonify({"error": "Pas d'image disponible"}), 404
+            
+    except Exception as e:
+        logger.error(f"Erreur snapshot caméra {camera_id}: {e}")
+        return jsonify({"error": "Erreur interne du serveur"}), 500
+
+@app.route('/camera/<int:camera_id>/start_stream', methods=['POST'])
+@login_required
+def start_camera_stream_route(camera_id):
+    """Démarre le flux d'une caméra"""
+    try:
+        equipement = Equipement.query.get(camera_id)
+        if not equipement:
+            return jsonify({"error": "Caméra non trouvée"}), 404
+        
+        if current_user.role == 'client' and equipement.client_id != current_user.client_id:
+            return jsonify({"error": "Accès refusé"}), 403
+        
+        if not equipement.has_stream_capability:
+            return jsonify({"error": "Streaming non configuré"}), 400
+        
+        success = camera_manager.start_camera_stream(equipement)
+        if success:
+            return jsonify({"status": "success", "message": "Flux démarré"})
+        else:
+            return jsonify({"error": "Impossible de démarrer le flux"}), 500
+            
+    except Exception as e:
+        logger.error(f"Erreur démarrage flux caméra {camera_id}: {e}")
+        return jsonify({"error": "Erreur interne du serveur"}), 500
+
+@app.route('/camera/<int:camera_id>/stop_stream', methods=['POST'])
+@login_required
+def stop_camera_stream_route(camera_id):
+    """Arrête le flux d'une caméra"""
+    try:
+        equipement = Equipement.query.get(camera_id)
+        if not equipement:
+            return jsonify({"error": "Caméra non trouvée"}), 404
+        
+        if current_user.role == 'client' and equipement.client_id != current_user.client_id:
+            return jsonify({"error": "Accès refusé"}), 403
+        
+        success = camera_manager.stop_camera_stream(camera_id)
+        return jsonify({"status": "success", "stopped": success})
+        
+    except Exception as e:
+        logger.error(f"Erreur arrêt flux caméra {camera_id}: {e}")
+        return jsonify({"error": "Erreur interne du serveur"}), 500
+
+@app.route('/api/cameras/streams_status')
+@login_required
+def streams_status_api():
+    """API pour obtenir le statut de tous les flux de caméras"""
+    try:
+        status = camera_manager.get_streams_status()
+        
+        # Filtrer selon les permissions utilisateur
+        if current_user.role == 'client':
+            # Pour les clients, ne montrer que leurs caméras
+            user_cameras = [eq.id for eq in Equipement.query.filter_by(client_id=current_user.client_id).all()]
+            status = {k: v for k, v in status.items() if k in user_cameras}
+        
+        return jsonify(status)
+        
+    except Exception as e:
+        logger.error(f"Erreur API statut streams: {e}")
+        return jsonify({"error": "Erreur interne du serveur"}), 500
+
+# Route pour la page de détail d'une caméra avec flux vidéo
+@app.route('/camera/<int:camera_id>')
+@login_required
+def camera_detail(camera_id):
+    """Page de détail d'une caméra avec flux vidéo"""
+    try:
+        equipement = Equipement.query.get(camera_id)
+        if not equipement:
+            flash('Caméra non trouvée.', 'error')
+            return redirect(url_for('equipements'))
+        
+        # Vérifier les permissions
+        if current_user.role == 'client' and equipement.client_id != current_user.client_id:
+            flash('Accès refusé à cette caméra.', 'error')
+            return redirect(url_for('equipements'))
+        
+        # Obtenir l'historique récent
+        historique = db.session.query(HistoriquePing).filter_by(
+            equipement_id=camera_id
+        ).order_by(HistoriquePing.timestamp.desc()).limit(10).all()
+        
+        # Obtenir les alertes récentes
+        alertes = db.session.query(Alerte).filter_by(
+            equipement_id=camera_id
+        ).order_by(Alerte.timestamp.desc()).limit(5).all()
+        
+        return render_template('camera_detail.html', 
+                             equipement=equipement, 
+                             historique=historique,
+                             alertes=alertes)
+        
+    except Exception as e:
+        logger.error(f"Erreur détail caméra {camera_id}: {e}")
+        flash(f"Erreur lors du chargement de la caméra: {e}", "error")
+        return redirect(url_for('equipements'))
+
+# Routes pour la configuration RTSP
+@app.route('/equipements/<int:equipement_id>/configure_stream', methods=['GET', 'POST'])
+@login_required
+def configure_stream(equipement_id):
+    """Configuration du flux RTSP pour un équipement"""
+    try:
+        equipement = Equipement.query.get(equipement_id)
+        if not equipement:
+            flash('Équipement non trouvé.', 'error')
+            return redirect(url_for('equipements'))
+        
+        # Vérifier les permissions
+        if current_user.role == 'client' and equipement.client_id != current_user.client_id:
+            flash('Accès refusé.', 'error')
+            return redirect(url_for('equipements'))
+        
+        if request.method == 'POST':
+            # Sauvegarder la configuration RTSP
+            equipement.rtsp_url = request.form.get('rtsp_url')
+            equipement.rtsp_username = request.form.get('rtsp_username')
+            equipement.rtsp_password = request.form.get('rtsp_password')
+            equipement.stream_enabled = bool(request.form.get('stream_enabled'))
+            equipement.resolution = request.form.get('resolution', '640x480')
+            equipement.fps = int(request.form.get('fps', 15))
+            equipement.stream_quality = request.form.get('stream_quality', 'medium')
+            
+            db.session.commit()
+            flash('Configuration RTSP sauvegardée avec succès.', 'success')
+            return redirect(url_for('camera_detail', camera_id=equipement_id))
+        
+        return render_template('configure_stream.html', equipement=equipement)
+        
+    except Exception as e:
+        logger.error(f"Erreur configuration stream {equipement_id}: {e}")
+        flash(f"Erreur lors de la configuration: {e}", "error")
+        return redirect(url_for('equipements'))
+
+# Nettoyage automatique des flux morts
+@app.before_request
+def cleanup_dead_streams():
+    """Nettoie les flux morts avant chaque requête"""
+    # Ne nettoyer que de temps en temps pour éviter la surcharge
+    import random
+    if random.randint(1, 100) == 1:  # 1% de chance à chaque requête
+        camera_manager.cleanup_dead_streams()
