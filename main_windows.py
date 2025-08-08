@@ -35,10 +35,11 @@ def main():
         
         # Importer l'application Flask
         from app import app
+        import routes  # Importer les routes
         
         # Configuration spécifique à Windows
-        app.config['DEBUG'] = True
-        app.config['ENV'] = 'development'
+        app.config['DEBUG'] = False  # Désactiver le debug pour éviter les erreurs
+        app.config['ENV'] = 'production'
         
         print("=" * 60)
         print("   SYSTÈME DE MONITORING DE CAMÉRAS")
@@ -55,9 +56,9 @@ def main():
         app.run(
             host='127.0.0.1',  # Localhost seulement pour la sécurité
             port=5000,
-            debug=True,
-            use_reloader=False,  # Éviter les problèmes de rechargement sur Windows
-            threaded=True
+            debug=False,        # Désactiver debug pour éviter les conflits
+            use_reloader=False, # Éviter les problèmes de rechargement sur Windows
+            threaded=True       # Support multi-thread
         )
         
     except KeyboardInterrupt:

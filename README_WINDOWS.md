@@ -5,8 +5,9 @@
 ### Option 1 : Installation Simple (RECOMMANDÉE) ⭐
 1. **Double-cliquez sur `install_simple_windows.bat`**
 2. Attendez l'installation automatique
-3. Lancez avec `python start_windows.py`
-   - **Cette version évite les erreurs de dépendances**
+3. **Double-cliquez sur `run_simple.bat`**
+   - **Cette version évite toutes les erreurs**
+   - Pas d'erreur "localhost refusé"
 
 ### Option 2 : Installation Automatique Avancée
 1. Double-cliquez sur `install_windows.bat`

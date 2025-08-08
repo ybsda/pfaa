@@ -106,7 +106,8 @@ def main():
         print("=" * 50)
         
         from app import app
-        app.run(host='127.0.0.1', port=5000, debug=True, threaded=True)
+        import routes  # Importer les routes
+        app.run(host='127.0.0.1', port=5000, debug=False, threaded=True, use_reloader=False)
         
     except KeyboardInterrupt:
         print("\n\n✅ Serveur arrêté")

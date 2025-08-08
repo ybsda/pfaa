@@ -1,13 +1,23 @@
 import logging
+import os
 from datetime import datetime, timedelta
 from flask import render_template, request, jsonify, flash, redirect, url_for, session, Response
 from flask_login import login_user, logout_user, login_required, current_user
 from app import app, db
 from models import Client, Equipement, HistoriquePing, Alerte, User
 from email_service import email_service
-from camera_stream import camera_manager, generate_stream_response
 
 logger = logging.getLogger(__name__)
+
+# Importer le gestionnaire de caméras seulement si les streams sont activés
+if os.environ.get('DISABLE_CAMERA_STREAMS') != '1':
+    try:
+        from camera_stream import camera_manager, generate_stream_response
+    except ImportError as e:
+        logger.warning(f"Camera streaming non disponible: {e}")
+        camera_manager = None
+else:
+    camera_manager = None
 
 # Routes d'authentification
 @app.route('/login', methods=['GET', 'POST'])
@@ -489,6 +499,10 @@ def api_equipements_status():
 def camera_stream(camera_id):
     """Flux vidéo MJPEG pour une caméra"""
     try:
+        # Vérifier si le streaming est disponible
+        if camera_manager is None:
+            return jsonify({"error": "Streaming de caméras non disponible"}), 503
+        
         # Vérifier les permissions
         equipement = Equipement.query.get(camera_id)
         if not equipement:
@@ -519,6 +533,10 @@ def camera_stream(camera_id):
 def camera_snapshot(camera_id):
     """Capture instantanée d'une caméra"""
     try:
+        # Vérifier si le streaming est disponible
+        if camera_manager is None:
+            return jsonify({"error": "Streaming de caméras non disponible"}), 503
+        
         # Vérifier les permissions
         equipement = Equipement.query.get(camera_id)
         if not equipement:
@@ -677,11 +695,18 @@ def configure_stream(equipement_id):
         flash(f"Erreur lors de la configuration: {e}", "error")
         return redirect(url_for('equipements'))
 
-# Nettoyage automatique des flux morts
+# Nettoyage automatique des flux morts (désactivé pour Windows)
 @app.before_request
 def cleanup_dead_streams():
     """Nettoie les flux morts avant chaque requête"""
+    # Désactiver sur Windows pour éviter les erreurs OpenCV
+    if os.environ.get('DISABLE_CAMERA_STREAMS') == '1':
+        return
+    
     # Ne nettoyer que de temps en temps pour éviter la surcharge
     import random
     if random.randint(1, 100) == 1:  # 1% de chance à chaque requête
-        camera_manager.cleanup_dead_streams()
+        try:
+            camera_manager.cleanup_dead_streams()
+        except Exception as e:
+            logger.debug(f"Erreur nettoyage streams: {e}")

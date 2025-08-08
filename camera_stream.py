@@ -258,6 +258,9 @@ class CameraStreamManager:
 # Instance globale du gestionnaire
 camera_manager = CameraStreamManager()
 
+# Arrêter tous les flux au démarrage pour éviter les conflits
+camera_manager.shutdown_all()
+
 def generate_stream_response(camera_id):
     """Génère une réponse HTTP pour le flux MJPEG"""
     return Response(
